@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-mono: "Space Mono", monospace;
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Cormorant Garamond", serif;
+  --color-bg: #0a0a0a;
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255, 255, 255, 0.7);
+  --color-text-light: rgba(255, 255, 255, 0.5);
+  --color-accent: #d4af37;
+  --font-size-mono: clamp(10px, 1.2vw, 12px);
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white antialiased overflow-hidden select-none m-0 p-0;
+    background-color: var(--color-bg);
+  }
+}
+
+.slider-wrapper {
+  @apply relative w-screen h-screen overflow-hidden opacity-0 transition-opacity duration-1000 ease-in-out;
+}
+
+.slider-wrapper.loaded {
+  @apply opacity-100;
+}
+
+.webgl-canvas {
+  @apply absolute inset-0 w-full h-full z-0;
+}
+
+.slide-content {
+  @apply relative z-10 flex flex-col justify-end h-full px-20 pb-40 max-w-4xl pointer-events-none;
+}
+
+.slide-title {
+  @apply text-white font-display text-[10vw] leading-[0.85] mb-6 italic;
+}
+
+.slide-description {
+  @apply text-white/70 max-w-xl text-lg tracking-widest leading-relaxed uppercase font-sans;
+}
+
+.slide-number {
+  @apply absolute top-12 left-20 z-20 font-mono text-xs tracking-[0.5em] text-white;
+}
+
+.slide-total {
+  @apply absolute top-[calc(3rem+2px)] left-[calc(5rem+4.5em)] z-20 font-mono text-[10px] tracking-[0.4em] text-white/30;
+}
+
+.slides-navigation {
+  @apply absolute bottom-12 right-20 z-20 flex flex-col gap-6 items-end;
+}
+
+.slide-nav-item {
+  @apply flex items-center gap-6 cursor-pointer opacity-40 transition-all duration-500 hover:opacity-100;
+}
+
+.slide-nav-item.active {
+  @apply opacity-100;
+}
+
+.slide-nav-item.active .slide-nav-title {
+  @apply text-accent;
+}
+
+.slide-nav-title {
+  @apply font-mono text-[10px] tracking-[0.4em] uppercase text-white transition-colors duration-300;
+}
+
+.slide-progress-line {
+  @apply relative w-12 h-[1px] bg-white/10 overflow-hidden;
+}
+
+.slide-progress-fill {
+  @apply absolute top-0 left-0 h-full bg-accent w-0 opacity-0 transition-opacity duration-300;
+}
+
+/* Custom fonts from prompt's variables (using Fallbacks) */
+.font-mono { font-family: var(--font-mono); }
+.font-sans { font-family: var(--font-sans); }
+.font-display { font-family: var(--font-display); }
