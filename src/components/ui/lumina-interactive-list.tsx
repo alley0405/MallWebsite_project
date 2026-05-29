@@ -6,6 +6,7 @@ import { CinemaBookingSystem } from "@/components/ui/cinema-booking";
 import InteractiveImageBentoGallery from "@/components/ui/bento-gallery";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
+import { CosmicParallaxBg } from "@/components/ui/parallax-cosmic-background";
 
 const Navbar = ({ active }: { active: boolean }) => (
     <nav className={`fixed top-0 left-0 w-full z-[100] px-20 py-10 transition-all duration-1000 ease-in-out ${active ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}>
@@ -222,22 +223,32 @@ export function Component() {
                     </section>
                 </div>
             ) : (
-                <div className="w-full min-h-screen container mx-auto px-40 flex items-end pb-40 relative">
-                    <div className="w-full z-20">
-                        <div className="slide-hero mb-20 max-w-5xl">
-                            <h1 className="italic font-display text-[10vw] leading-none mb-12 tracking-tighter">{floorContent[currentSlide].title}</h1>
-                            <p className="text-white/50 max-w-4xl text-2xl tracking-[0.3em] uppercase leading-relaxed">{floorContent[currentSlide].description}</p>
-                            
-                            {currentSlide === 2 && (
-                                <button onClick={() => setIsBookingOpen(true)} className="mt-20 group flex items-center gap-10 bg-white/5 backdrop-blur-xl border border-white/10 px-12 py-6 rounded-full hover:bg-white hover:text-black transition-all duration-700">
-                                    <span className="font-mono text-xs tracking-[1em] uppercase">Watch Axis Show</span>
-                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-black group-hover:text-accent font-bold transition-all"><ChevronRight /></div>
-                                </button>
+                <div className="w-full min-h-screen relative">
+                    {/* Cosmic star-field background on Couture Collective floor */}
+                    {currentSlide === 1 && (
+                        <CosmicParallaxBg
+                            head=""
+                            text=""
+                            loop={true}
+                        />
+                    )}
+                    <div className="container mx-auto px-40 flex items-end pb-40 relative" style={{ minHeight: '100vh' }}>
+                        <div className="w-full z-20">
+                            <div className="slide-hero mb-20 max-w-5xl">
+                                <h1 className="italic font-display text-[10vw] leading-none mb-12 tracking-tighter">{floorContent[currentSlide].title}</h1>
+                                <p className="text-white/50 max-w-4xl text-2xl tracking-[0.3em] uppercase leading-relaxed">{floorContent[currentSlide].description}</p>
+                                
+                                {currentSlide === 2 && (
+                                    <button onClick={() => setIsBookingOpen(true)} className="mt-20 group flex items-center gap-10 bg-white/5 backdrop-blur-xl border border-white/10 px-12 py-6 rounded-full hover:bg-white hover:text-black transition-all duration-700">
+                                        <span className="font-mono text-xs tracking-[1em] uppercase">Watch Axis Show</span>
+                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-black group-hover:text-accent font-bold transition-all"><ChevronRight /></div>
+                                    </button>
+                                )}
+                            </div>
+                            {floorContent[currentSlide].type === "gallery" && (
+                                <div className="mt-32"><InteractiveImageBentoGallery imageItems={floorContent[currentSlide].items || []} title="Axial Brands" description="Metropolis Collective." /></div>
                             )}
                         </div>
-                        {floorContent[currentSlide].type === "gallery" && (
-                            <div className="mt-32"><InteractiveImageBentoGallery imageItems={floorContent[currentSlide].items || []} title="Axial Brands" description="Metropolis Collective." /></div>
-                        )}
                     </div>
                 </div>
             )}
