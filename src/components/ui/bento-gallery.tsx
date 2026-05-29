@@ -9,6 +9,7 @@ import {
 } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
+import { BrandStoreModal } from "./brand-store"
 
 type ImageItem = {
   id: number | string
@@ -49,9 +50,11 @@ const itemVariants = {
 const ImageModal = ({
   item,
   onClose,
+  onVisitStore,
 }: {
   item: ImageItem
   onClose: () => void
+  onVisitStore: () => void
 }) => {
   return (
     <motion.div
@@ -83,7 +86,12 @@ const ImageModal = ({
             </div>
             <h2 className="text-6xl font-display italic text-white mb-8 tracking-tighter leading-tight">{item.title}</h2>
             <p className="text-white/50 font-sans text-xl leading-relaxed max-w-md tracking-wide">{item.desc}</p>
-            <button className="mt-12 px-12 py-5 bg-white text-black font-mono text-[10px] tracking-[0.5em] uppercase hover:bg-accent transition-all duration-500">Visit Store</button>
+            <button 
+              onClick={onVisitStore}
+              className="mt-12 px-12 py-5 bg-white text-black font-mono text-[10px] tracking-[0.5em] uppercase hover:bg-accent transition-all duration-500"
+            >
+              Visit Store
+            </button>
         </div>
       </motion.div>
       <button
@@ -100,6 +108,7 @@ const InteractiveImageBentoGallery: React.FC<
   InteractiveImageBentoGalleryProps
 > = ({ imageItems, title, description }) => {
   const [selectedItem, setSelectedItem] = useState<ImageItem | null>(null)
+  const [isStoreOpen, setIsStoreOpen] = useState(false)
   const [dragConstraint, setDragConstraint] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
@@ -182,10 +191,23 @@ const InteractiveImageBentoGallery: React.FC<
       </div>
 
       <AnimatePresence>
-        {selectedItem && (
-          <ImageModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+        {selectedItem && !isStoreOpen && (
+          <ImageModal 
+            item={selectedItem} 
+            onClose={() => setSelectedItem(null)} 
+            onVisitStore={() => setIsStoreOpen(true)}
+          />
         )}
       </AnimatePresence>
+
+      <BrandStoreModal 
+        isOpen={isStoreOpen} 
+        onClose={() => {
+          setIsStoreOpen(false);
+          setSelectedItem(null);
+        }} 
+        brandName={selectedItem?.title || ""} 
+      />
     </section>
   )
 }
