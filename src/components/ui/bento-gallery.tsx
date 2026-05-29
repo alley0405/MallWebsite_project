@@ -10,6 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 import { BrandStoreModal } from "./brand-store"
+import { CardStack } from "./card-stack"
+import type { CardStackItem } from "./card-stack"
 
 type ImageItem = {
   id: number | string
@@ -109,35 +111,25 @@ const InteractiveImageBentoGallery: React.FC<
 > = ({ imageItems, title, description }) => {
   const [selectedItem, setSelectedItem] = useState<ImageItem | null>(null)
   const [isStoreOpen, setIsStoreOpen] = useState(false)
-  const [dragConstraint, setDragConstraint] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
   const targetRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const calculateConstraints = () => {
-      if (gridRef.current && containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth
-        const gridWidth = gridRef.current.scrollWidth
-        const newConstraint = Math.min(0, containerWidth - gridWidth - 64)
-        setDragConstraint(newConstraint)
-      }
-    }
-    calculateConstraints()
-    window.addEventListener("resize", calculateConstraints)
-    return () => window.removeEventListener("resize", calculateConstraints)
-  }, [imageItems])
 
   const { scrollYProgress } = useScroll({
     target: targetRef,
     offset: ["start end", "end start"],
   })
   const opacity = useTransform(scrollYProgress, [0, 0.1, 0.9, 1], [0, 1, 1, 0])
-  const drift = useTransform(scrollYProgress, [0, 1], [100, -100])
+
+  const cardStackItems: CardStackItem[] = imageItems.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.desc,
+    imageSrc: item.url,
+  }));
 
   return (
     <section ref={targetRef} className="relative w-full overflow-hidden bg-transparent py-20">
-      <motion.div style={{ opacity }} className="container mx-auto px-4 mb-20 text-left px-20">
+      <motion.div style={{ opacity }} className="container mx-auto px-4 mb-10 text-left px-20">
         <div className="flex items-center gap-6 mb-8">
             <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center">
                 <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
@@ -148,46 +140,78 @@ const InteractiveImageBentoGallery: React.FC<
         <p className="mt-8 max-w-3xl text-xl font-sans text-white/40 tracking-[0.1em] leading-relaxed uppercase">{description}</p>
       </motion.div>
 
-      <div ref={containerRef} className="relative w-full cursor-grab active:cursor-grabbing px-20">
-        <motion.div style={{ x: drift }} className="w-max">
-          <motion.div
-            ref={gridRef}
-            className="grid auto-cols-[minmax(25rem,1fr)] grid-flow-col gap-10"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-          >
-            {imageItems.map((item) => (
-              <motion.div
-                key={item.id}
-                variants={itemVariants}
+      {/* Center Focused 3D Card Stack */}
+      <div ref={containerRef} className="relative w-full max-w-5xl mx-auto px-20 flex justify-center items-center py-10">
+        <CardStack
+          items={cardStackItems}
+          initialIndex={0}
+          autoAdvance={false}
+          showDots
+          cardWidth={560}
+          cardHeight={360}
+          overlap={0.52}
+          spreadDeg={36}
+          perspectivePx={1200}
+          depthPx={110}
+          tiltXDeg={8}
+          renderCard={(item, state) => (
+            <div className="relative w-full h-full group overflow-hidden bg-black/60 rounded-[30px] border border-white/10 select-none">
+              {/* Background Image with grayscale/blur on inactive */}
+              <img
+                src={item.imageSrc}
+                alt={item.title}
                 className={cn(
-                  "group relative flex h-[35rem] w-[25rem] cursor-pointer items-end overflow-hidden rounded-[40px] border border-white/5 bg-white/[0.02] p-10 backdrop-blur-sm transition-all duration-700 hover:border-accent/40 hover:bg-white/[0.05] shadow-2xl",
-                  item.span,
+                  "absolute inset-0 w-full h-full object-cover transition-all duration-1000",
+                  state.active 
+                    ? "grayscale-0 scale-105 opacity-80" 
+                    : "grayscale-[0.8] scale-100 opacity-40 blur-[2px]"
                 )}
-                whileHover={{ y: -20, scale: 1.02 }}
-                onClick={() => setSelectedItem(item)}
-              >
-                <img
-                  src={item.url}
-                  alt={item.title}
-                  className="absolute inset-0 h-full w-full object-cover grayscale-[0.6] opacity-60 transition-all duration-1000 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent transition-opacity duration-700 group-hover:opacity-40" />
-                
-                <div className="relative z-10 w-full translate-y-4 opacity-0 transition-all duration-700 group-hover:translate-y-0 group-hover:opacity-100">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="h-[1px] w-10 bg-accent"></div>
-                    <span className="text-[10px] font-mono tracking-[0.8em] uppercase text-accent font-bold">Lumina Store</span>
-                  </div>
-                  <h3 className="text-4xl font-display italic text-white tracking-tighter group-hover:text-accent transition-colors duration-500">{item.title}</h3>
-                  <p className="mt-4 text-xs font-mono text-white/40 leading-[2] uppercase tracking-[0.4em] line-clamp-2">{item.desc}</p>
+                draggable={false}
+              />
+              {/* Neon Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+              
+              {/* Glow highlight on border */}
+              <div className={cn(
+                "absolute inset-0 border-[3px] rounded-[30px] transition-all duration-700 pointer-events-none",
+                state.active ? "border-accent/40 shadow-[inset_0_0_40px_rgba(212,175,55,0.3)]" : "border-white/5"
+              )} />
+
+              {/* Content */}
+              <div className="absolute inset-0 z-10 flex flex-col justify-end p-10 text-left">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-[1px] w-8 bg-accent"></div>
+                  <span className="text-[10px] font-mono tracking-[0.6em] uppercase text-accent font-bold">Lumina Store</span>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
+                <h3 className="text-4xl font-display italic text-white tracking-tighter mb-4 group-hover:text-accent transition-colors duration-500">
+                  {item.title}
+                </h3>
+                <p className="text-white/50 text-xs font-mono leading-relaxed uppercase tracking-[0.2em] mb-8 line-clamp-2">
+                  {item.description}
+                </p>
+
+                {state.active && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const originalItem = imageItems.find(imgIt => imgIt.title === item.title);
+                      if (originalItem) {
+                        setSelectedItem(originalItem);
+                        setIsStoreOpen(true);
+                      }
+                    }}
+                    className="self-start px-12 py-5 bg-white text-black font-mono text-[9px] tracking-[0.5em] uppercase hover:bg-accent transition-all duration-500 rounded-full font-bold shadow-2xl hover:scale-105"
+                  >
+                    Enter Store
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          )}
+        />
       </div>
 
       <AnimatePresence>
