@@ -134,6 +134,10 @@ export function ArcadeNexusSystem() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [lastBonusDate, setLastBonusDate] = useState(() => {
+    return localStorage.getItem('axis_arcade_last_bonus') || '';
+  });
+
   // Modal & UI states
   const [isRecharging, setIsRecharging] = useState(false);
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -177,12 +181,36 @@ export function ArcadeNexusSystem() {
     localStorage.setItem('axis_arcade_owner', ownerName);
     localStorage.setItem('axis_arcade_logs', JSON.stringify(logs));
     localStorage.setItem('axis_arcade_inventory', JSON.stringify(inventory));
-  }, [points, tickets, cardId, tier, ownerName, logs, inventory]);
+    localStorage.setItem('axis_arcade_last_bonus', lastBonusDate);
+  }, [points, tickets, cardId, tier, ownerName, logs, inventory, lastBonusDate]);
 
   // Log updater utility
   const addLog = (msg: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`[${timestamp}] ${msg}`, ...prev.slice(0, 19)]);
+  };
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const canClaimDailyBonus = lastBonusDate !== todayKey;
+
+  const claimDailyBonus = () => {
+    if (!canClaimDailyBonus) return;
+    setPoints(prev => prev + 75);
+    setTickets(prev => prev + 25);
+    setLastBonusDate(todayKey);
+    addLog('Daily arcade bonus claimed: +75 PTS and +25 TKT.');
+    playAudioBeep(1200, 'sine', 0.25);
+  };
+
+  const resetArcadeCard = () => {
+    setPoints(150);
+    setTickets(0);
+    setTier('NEON CHRONO');
+    setOwnerName('METROPOLIS RESIDENT');
+    setLogs([`[${new Date().toLocaleTimeString()}] Nexus card reset to starter profile.`]);
+    setInventory([]);
+    setLastBonusDate('');
+    setCardId(`AXIS-${Math.floor(1000 + Math.random() * 9000)}-NX`);
   };
 
   // 3D Card Mouse Tilt Effect
@@ -358,6 +386,19 @@ export function ArcadeNexusSystem() {
           </div>
           <div className="flex items-center gap-4">
             <button
+              onClick={claimDailyBonus}
+              disabled={!canClaimDailyBonus}
+              className={cn(
+                "px-6 py-3 border font-mono text-[10px] tracking-[0.4em] uppercase rounded-full transition-all duration-300 flex items-center gap-2",
+                canClaimDailyBonus
+                  ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:border-emerald-300 hover:bg-emerald-950/40"
+                  : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
+              )}
+            >
+              <Sparkles size={12} />
+              Daily Bonus
+            </button>
+            <button
               onClick={() => setIsRecharging(true)}
               className="px-6 py-3 border border-cyan-500/30 hover:border-cyan-400 bg-cyan-950/20 text-cyan-400 font-mono text-[10px] tracking-[0.4em] uppercase hover:bg-cyan-950/40 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(34,211,238,0.1)] flex items-center gap-2"
             >
@@ -370,6 +411,13 @@ export function ArcadeNexusSystem() {
             >
               <Gift size={12} />
               Prize Counter
+            </button>
+            <button
+              onClick={resetArcadeCard}
+              className="w-11 h-11 rounded-full border border-white/10 bg-white/5 text-white/35 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"
+              title="Reset arcade card"
+            >
+              <RefreshCw size={15} />
             </button>
           </div>
         </div>
@@ -465,9 +513,11 @@ export function ArcadeNexusSystem() {
                 <div className="flex justify-between items-end relative z-10">
                   <div className="flex flex-col">
                     <span className="font-mono text-[7px] tracking-[0.2em] uppercase text-white/30">Cardholder Profile</span>
-                    <span className="font-mono text-[10px] text-white/80 uppercase tracking-widest font-semibold mt-1">
-                      {ownerName}
-                    </span>
+                    <input
+                      value={ownerName}
+                      onChange={(event) => setOwnerName(event.target.value.toUpperCase())}
+                      className="mt-1 max-w-[190px] bg-transparent border-b border-white/10 focus:border-cyan-400 outline-none font-mono text-[10px] text-white/80 uppercase tracking-widest font-semibold"
+                    />
                   </div>
                   <div className="flex flex-col text-right">
                     <span className="font-mono text-[7px] tracking-[0.2em] uppercase text-white/30">Lumina Registry</span>

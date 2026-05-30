@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { ElevatorPanel } from "@/components/ui/elevator-panel";
-import { CinemaBookingSystem } from "@/components/ui/cinema-booking";
+import { CinemaBookingSystem, CinemaFloorSystem } from "@/components/ui/cinema-booking";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { CosmicParallaxBg } from "@/components/ui/parallax-cosmic-background";
 import { BrandStoreModal } from "@/components/ui/brand-store";
 import { ArcadeNexusSystem } from "@/components/ui/arcade-system";
+import { FoodCourtSystem } from "@/components/ui/food-court";
+import { LoungeBookingSystem } from "@/components/ui/lounge-booking";
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 const Navbar = ({ active }: { active: boolean }) => (
@@ -39,13 +41,75 @@ const Navbar = ({ active }: { active: boolean }) => (
 );
 
 // ─── Brand data ───────────────────────────────────────────────────────────────
+type BrandCategory = "All" | "Apparel" | "Footwear" | "Sports" | "Luxury";
+
 const brands = [
-  { id: 1, name: "H&M",            tag: "Fast Fashion",          image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80" },
-  { id: 2, name: "ZARA",           tag: "Contemporary Style",    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=900&q=80" },
-  { id: 3, name: "TOMMY HILFIGER", tag: "Classic American Cool", image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=80" },
-  { id: 4, name: "ADIDAS",         tag: "Sport & Streetwear",    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=80" },
-  { id: 5, name: "LOUIS PHILIPPE", tag: "Mark of Elegance",      image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=900&q=80" },
-];
+  {
+    id: 1,
+    name: "H&M",
+    tag: "Fast Fashion",
+    category: "Apparel",
+    level: "F1 - Bay 01",
+    priceBand: "Rs 799+",
+    offer: "Weekend essentials at 20% off",
+    products: 42,
+    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80",
+  },
+  {
+    id: 2,
+    name: "ZARA",
+    tag: "Contemporary Style",
+    category: "Apparel",
+    level: "F1 - Bay 02",
+    priceBand: "Rs 1,490+",
+    offer: "New capsule collection live",
+    products: 36,
+    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=900&q=80",
+  },
+  {
+    id: 3,
+    name: "TOMMY HILFIGER",
+    tag: "Classic American Cool",
+    category: "Luxury",
+    level: "F1 - Bay 03",
+    priceBand: "Rs 2,999+",
+    offer: "Premium denim edit",
+    products: 28,
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=80",
+  },
+  {
+    id: 4,
+    name: "ADIDAS",
+    tag: "Sport & Streetwear",
+    category: "Sports",
+    level: "F1 - Bay 04",
+    priceBand: "Rs 1,999+",
+    offer: "Running shoes trial zone open",
+    products: 31,
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=80",
+  },
+  {
+    id: 5,
+    name: "LOUIS PHILIPPE",
+    tag: "Mark of Elegance",
+    category: "Luxury",
+    level: "F1 - Bay 05",
+    priceBand: "Rs 3,499+",
+    offer: "Formalwear concierge available",
+    products: 24,
+    image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=900&q=80",
+  },
+] satisfies Array<{
+  id: number;
+  name: string;
+  tag: string;
+  category: Exclude<BrandCategory, "All">;
+  level: string;
+  priceBand: string;
+  offer: string;
+  products: number;
+  image: string;
+}>;
 
 // ─── Floor content ────────────────────────────────────────────────────────────
 const floorContent = [
@@ -57,13 +121,24 @@ const floorContent = [
   { title: "Sky Deck Lounge",    description: "Panoramic sanctuary under simulated moonlight.",                  media: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1950&q=80" },
 ];
 
+const getInitialFloor = () => {
+  if (typeof window === 'undefined') return 0;
+  const floor = Number(new URLSearchParams(window.location.search).get('floor'));
+  return Number.isInteger(floor) && floor >= 0 && floor < floorContent.length ? floor : 0;
+};
+
 // ─── Couture Hover-Reveal Brand Menu ─────────────────────────────────────────
 function CoutureBrandMenu({ onEnterStore }: { onEnterStore: (name: string) => void }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState<BrandCategory>("All");
+  const [featuredId, setFeaturedId] = useState(2);
   const [mousePos, setMousePos]   = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const hoveredBrand = brands.find(b => b.id === hoveredId) ?? null;
+  const visibleBrands = activeCategory === "All" ? brands : brands.filter(brand => brand.category === activeCategory);
+  const featuredBrand = brands.find(brand => brand.id === featuredId) ?? brands[0];
+  const categories: BrandCategory[] = ["All", "Apparel", "Footwear", "Sports", "Luxury"];
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -209,8 +284,143 @@ function CoutureBrandMenu({ onEnterStore }: { onEnterStore: (name: string) => vo
 }
 
 // ─── Main App Component ───────────────────────────────────────────────────────
+function FashionFloorSystem({ onEnterStore }: { onEnterStore: (name: string) => void }) {
+  const [activeCategory, setActiveCategory] = useState<BrandCategory>("All");
+  const [featuredId, setFeaturedId] = useState(2);
+  const visibleBrands = activeCategory === "All" ? brands : brands.filter(brand => brand.category === activeCategory);
+  const featuredBrand = brands.find(brand => brand.id === featuredId) ?? brands[0];
+  const categories: BrandCategory[] = ["All", "Apparel", "Footwear", "Sports", "Luxury"];
+
+  return (
+    <div className="relative w-full min-h-screen px-10 md:px-20 xl:px-32 py-28 flex items-center overflow-hidden">
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1950&q=80"
+          alt=""
+          className="h-full w-full object-cover opacity-55"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(212,175,55,0.22),transparent_32%),linear-gradient(90deg,rgba(0,0,0,0.92),rgba(0,0,0,0.62)_42%,rgba(0,0,0,0.86))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:80px_80px]" />
+        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black via-black/65 to-transparent" />
+      </div>
+
+      <div className="relative z-10 w-full grid grid-cols-1 xl:grid-cols-[0.86fr_1.14fr] gap-10 items-center">
+        <section>
+          <div className="mb-8 flex items-center gap-5">
+            <div className="w-10 h-10 rounded-full border border-accent/30 bg-black/40 backdrop-blur-xl flex items-center justify-center">
+              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+            </div>
+            <span className="font-mono text-[9px] tracking-[0.8em] uppercase text-accent font-bold">Couture Collective - Floor 01</span>
+          </div>
+          <h1 className="font-display italic text-[clamp(4.2rem,8vw,8.7rem)] leading-none tracking-tighter text-white mb-6 drop-shadow-[0_18px_45px_rgba(0,0,0,0.65)]">Couture Collective</h1>
+          <p className="max-w-2xl font-mono text-[10px] md:text-xs tracking-[0.35em] uppercase text-white/35 leading-loose mb-10">
+            Browse fashion brands, filter collections, preview offers, and enter each store for shopping.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3 mb-10 max-w-xl">
+            <div className="border border-white/10 bg-black/45 backdrop-blur-2xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-white/35">Brands</span>
+              <p className="mt-3 font-display italic text-4xl leading-none text-white">{brands.length}</p>
+            </div>
+            <div className="border border-white/10 bg-black/45 backdrop-blur-2xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-white/35">Products</span>
+              <p className="mt-3 font-display italic text-4xl leading-none text-white">{brands.reduce((sum, brand) => sum + brand.products, 0)}</p>
+            </div>
+            <div className="border border-white/10 bg-black/45 backdrop-blur-2xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-white/35">Open</span>
+              <p className="mt-3 font-display italic text-4xl leading-none text-white">10-10</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`px-5 py-3 rounded-full border font-mono text-[9px] tracking-[0.35em] uppercase transition-all ${activeCategory === category ? "bg-accent text-black border-accent" : "bg-white/5 text-white/45 border-white/10 hover:text-white hover:border-white/25"}`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-[1fr_0.88fr] gap-6 min-h-[70vh]">
+          <div className="flex flex-col justify-end border border-white/10 bg-black/42 backdrop-blur-2xl px-7 py-5 shadow-[0_30px_100px_rgba(0,0,0,0.45)]">
+            <ul className="flex flex-col">
+              {visibleBrands.map((brand, idx) => (
+                <li key={brand.id} className="relative border-t border-white/[0.08] last:border-b last:border-white/[0.08]">
+                  <button
+                    onMouseEnter={() => setFeaturedId(brand.id)}
+                    onFocus={() => setFeaturedId(brand.id)}
+                    onClick={() => onEnterStore(brand.name)}
+                    className={`group relative w-full flex items-center justify-between py-5 text-left overflow-hidden transition-all ${featuredId === brand.id ? "bg-accent/[0.08]" : "hover:bg-white/[0.025]"}`}
+                  >
+                    <div className="relative flex items-center gap-6 min-w-0 px-1">
+                      <span className="font-mono text-[9px] text-white/20 group-hover:text-accent transition-colors duration-300 w-5 tabular-nums leading-none">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="block font-display italic leading-none tracking-tighter text-white/75 group-hover:text-white transition-colors duration-200" style={{ fontSize: "clamp(1.8rem, 3vw, 3.4rem)" }}>{brand.name}</span>
+                        <span className="mt-2 block font-mono text-[8px] tracking-[0.35em] uppercase text-white/25">{brand.category} - {brand.level}</span>
+                      </div>
+                    </div>
+                    <div className="relative flex items-center gap-5 pr-1">
+                      <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-white/25 group-hover:text-white/45 transition-colors hidden md:block">{brand.priceBand}</span>
+                      <div className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/25 group-hover:border-accent group-hover:text-accent group-hover:bg-accent/10 transition-all duration-300">
+                        <ArrowRight size={13} />
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {visibleBrands.length === 0 && (
+              <div className="border border-white/10 bg-black/45 backdrop-blur-xl p-10 text-white/35 font-mono text-[10px] tracking-[0.35em] uppercase">No brands in this category yet.</div>
+            )}
+          </div>
+
+          <div className="border border-accent/20 bg-black/62 backdrop-blur-2xl p-5 flex flex-col justify-between shadow-[0_35px_110px_rgba(0,0,0,0.55)]">
+            <AnimatePresence mode="wait">
+              <motion.div key={featuredBrand.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} className="flex flex-col h-full">
+                <div className="relative h-80 overflow-hidden border border-white/10">
+                  <img src={featuredBrand.image} alt={featuredBrand.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent" />
+                  <div className="absolute inset-0 border border-accent/10 shadow-[inset_0_0_45px_rgba(212,175,55,0.12)]" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-accent">{featuredBrand.tag}</span>
+                    <h2 className="mt-3 font-display italic text-5xl text-white leading-none">{featuredBrand.name}</h2>
+                  </div>
+                </div>
+                <div className="py-6 flex-1">
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    <div className="border border-white/10 bg-white/[0.03] p-4">
+                      <span className="font-mono text-[8px] tracking-[0.3em] uppercase text-white/30">Location</span>
+                      <p className="mt-2 font-mono text-[10px] tracking-[0.25em] uppercase text-white">{featuredBrand.level}</p>
+                    </div>
+                    <div className="border border-white/10 bg-white/[0.03] p-4">
+                      <span className="font-mono text-[8px] tracking-[0.3em] uppercase text-white/30">Starting</span>
+                      <p className="mt-2 font-mono text-[10px] tracking-[0.25em] uppercase text-white">{featuredBrand.priceBand}</p>
+                    </div>
+                  </div>
+                  <div className="border border-accent/25 bg-accent/10 p-5">
+                    <span className="font-mono text-[8px] tracking-[0.35em] uppercase text-accent">Live Offer</span>
+                    <p className="mt-3 text-white/75 text-sm leading-relaxed">{featuredBrand.offer}</p>
+                  </div>
+                </div>
+                <button onClick={() => onEnterStore(featuredBrand.name)} className="w-full py-5 rounded-full bg-white text-black hover:bg-accent transition-all font-mono text-[10px] tracking-[0.45em] uppercase">Enter Store</button>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function Component() {
-  const [currentSlide, setCurrentSlide]     = useState(0);
+  const initialFloorRef = useRef(getInitialFloor());
+  const [currentSlide, setCurrentSlide]     = useState(initialFloorRef.current);
   const [isLiftMoving, setIsLiftMoving]     = useState(false);
   const [isBookingOpen, setIsBookingOpen]   = useState(false);
   const [isBrandStoreOpen, setIsBrandStoreOpen] = useState(false);
@@ -231,7 +441,7 @@ export function Component() {
     let renderer: THREE.WebGLRenderer;
     let shaderMat: THREE.ShaderMaterial;
     let textures: THREE.Texture[] = [];
-    let currentIdx = 0;
+    let currentIdx = initialFloorRef.current;
 
     const init = async () => {
       if (!canvasRef.current) return;
@@ -291,8 +501,8 @@ export function Component() {
       });
 
       textures = await Promise.all(floorContent.map(f => loadTex(f.media)));
-      shaderMat.uniforms.uT1.value = textures[0];
-      shaderMat.uniforms.uS1.value = textures[0].userData.size;
+      shaderMat.uniforms.uT1.value = textures[currentIdx];
+      shaderMat.uniforms.uS1.value = textures[currentIdx].userData.size;
 
       const animate = () => { if (!renderer) return; requestAnimationFrame(animate); renderer.render(scene, camera); };
       animate();
@@ -330,7 +540,14 @@ export function Component() {
     return () => { if (renderer) renderer.dispose(); };
   }, []);
 
-  const changeFloor     = (f: number) => { if (navigateRef.current) navigateRef.current(f); };
+  const changeFloor     = (f: number) => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('floor', String(f));
+      window.history.replaceState(null, '', url);
+    }
+    if (navigateRef.current) navigateRef.current(f);
+  };
   const handleEnterStore = (name: string) => { setActiveBrand(name); setIsBrandStoreOpen(true); };
 
   return (
@@ -338,12 +555,16 @@ export function Component() {
       <Navbar active={currentSlide === 0} />
       <canvas ref={canvasRef} className="absolute inset-0" />
 
-      {/* Phase indicator */}
-      <div className="absolute top-32 left-20 z-20 pointer-events-none flex items-center gap-10">
-        <div className="w-[1px] h-20 bg-accent/20" />
-        <div className="flex flex-col">
-          <span className="font-mono text-[9px] tracking-[1em] text-accent font-bold uppercase">Axis Phase 0{currentSlide}</span>
-          <span className="font-mono text-5xl font-bold tracking-tighter mt-4 text-white/10">Metropolis Hub</span>
+      {/* Compact floor indicator */}
+      <div className="absolute left-6 bottom-6 md:left-10 md:bottom-10 z-[70] pointer-events-none">
+        <div className="flex items-center gap-4 rounded-full border border-white/10 bg-black/45 px-5 py-3 backdrop-blur-2xl shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <div className="h-2 w-2 rounded-full bg-accent shadow-[0_0_18px_rgba(212,175,55,0.65)]" />
+          <div className="flex flex-col leading-none">
+            <span className="font-mono text-[8px] tracking-[0.45em] text-accent uppercase">Axis Phase 0{currentSlide}</span>
+            <span className="mt-1 max-w-[180px] truncate font-mono text-[8px] tracking-[0.25em] text-white/35 uppercase">
+              {floorContent[currentSlide].title}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -388,7 +609,7 @@ export function Component() {
 
             {/* ── FLOOR 1: Couture Collective — Hover-Reveal Brand Menu ── */}
             {currentSlide === 1 && (
-              <CoutureBrandMenu onEnterStore={handleEnterStore} />
+              <FashionFloorSystem onEnterStore={handleEnterStore} />
             )}
 
             {/* ── FLOOR 3: Arcade Nexus — Card & Games System ── */}
@@ -397,30 +618,16 @@ export function Component() {
             )}
 
             {/* ── FLOORS 2, 4, 5: Other floors ── */}
-            {(currentSlide === 2 || currentSlide === 4 || currentSlide === 5) && (
-              <div className="w-full min-h-screen container mx-auto px-40 flex items-end pb-40 relative">
-                <div className="w-full z-20">
-                  <div className="slide-hero mb-20 max-w-5xl">
-                    <h1 className="italic font-display text-[10vw] leading-none mb-12 tracking-tighter">
-                      {floorContent[currentSlide].title}
-                    </h1>
-                    <p className="text-white/50 max-w-4xl text-2xl tracking-[0.3em] uppercase leading-relaxed">
-                      {floorContent[currentSlide].description}
-                    </p>
-                    {currentSlide === 2 && (
-                      <button
-                        onClick={() => setIsBookingOpen(true)}
-                        className="mt-20 group flex items-center gap-10 bg-white/5 backdrop-blur-xl border border-white/10 px-12 py-6 rounded-full hover:bg-white hover:text-black transition-all duration-700"
-                      >
-                        <span className="font-mono text-xs tracking-[1em] uppercase">Watch Axis Show</span>
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-black group-hover:text-accent font-bold transition-all">
-                          <ChevronRight />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+            {currentSlide === 4 && (
+              <FoodCourtSystem />
+            )}
+
+            {currentSlide === 5 && (
+              <LoungeBookingSystem />
+            )}
+
+            {currentSlide === 2 && (
+              <CinemaFloorSystem onBook={() => setIsBookingOpen(true)} />
             )}
           </motion.div>
         </AnimatePresence>
